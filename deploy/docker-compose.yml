@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  resource-server:
+    build:
+      context: ../resource-server
+    container_name: resource-server
+    ports:
+      - "8080:8080"
+    environment:
+      # Aquí irían variables de entorno reales si las necesitas
+      SPRING_PROFILES_ACTIVE: default
+    restart: unless-stopped
