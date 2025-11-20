@@ -1,4 +1,4 @@
-# Etapa 1: build del jar con Maven
+# Etapa 1: build del jar con Maven (incluye Maven + JDK17)
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 
 WORKDIR /app
@@ -18,6 +18,7 @@ WORKDIR /app
 # Copiamos el jar construido desde la etapa de build
 COPY --from=build /app/target/*.jar app.jar
 
+# Puerto por defecto (ajusta si tu app usa otro)
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
