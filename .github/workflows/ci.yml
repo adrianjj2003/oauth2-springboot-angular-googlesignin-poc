@@ -1,4 +1,4 @@
-# Pipeline de CI para OKR2 (resource-server)
+# Pipeline de CI para OKR2 (resource-server) 
 name: CI
 
 on:
