@@ -3,7 +3,6 @@ name: CD
 on:
   push:
     branches: [ develop ]
-  # Si más adelante usas main como rama estable, puedes cambiar aquí.
 
 jobs:
   build-and-push-resource-server:
