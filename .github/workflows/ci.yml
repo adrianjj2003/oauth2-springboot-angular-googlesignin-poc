@@ -21,10 +21,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Build backend (Maven, resource-server, sin tests)
+      - name: Build backend + tests + calidad (Maven, resource-server)
         working-directory: ./resource-server
-        run: mvn -B clean package -DskipTests
+        run: mvn -B clean verify
 
-        # Si mvn no existe en el runner para este proyecto, cambia a:
-        # run: ./mvnw -B clean verify
         
