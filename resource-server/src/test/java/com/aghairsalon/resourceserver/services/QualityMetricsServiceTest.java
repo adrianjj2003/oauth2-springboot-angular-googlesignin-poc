@@ -35,6 +35,7 @@ class QualityMetricsServiceTest {
 
         assertEquals(0, result);
     }
+// Comentario test para WP05 - política 2 reviewers
 
     @Test
     void defectReductionIsPositiveWhenDefectsDecrease() {
