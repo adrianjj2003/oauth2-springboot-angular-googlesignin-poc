@@ -1,18 +1,39 @@
 package com.aghairsalon.resourceserver.services;
 
-
 public class QualityMetricsService {
 
-    public int calculatePercentage(int coveredLines, int totalLines) {
-        if (totalLines <= 0) {
+    public int calculatePercentage(int value, int total) {
+        if (total <= 0 || value <= 0) {
             return 0;
         }
-        double ratio = (coveredLines * 100.0) / totalLines;
-        return (int) Math.round(ratio);
+
+        float percentage = (value * 100.0f) / total;
+        return Math.round(percentage);
     }
 
+    public boolean isCoverageAcceptable(int currentCoverage, int minimumCoverage) {
+        return currentCoverage >= minimumCoverage;
+    }
 
-    public boolean isCoverageAcceptable(int coverage, int minimumThreshold) {
-        return coverage >= minimumThreshold;
+ 
+    public int calculateDefectReductionPercentage(int previousDefects, int currentDefects) {
+        if (previousDefects <= 0) {
+            return 0;
+        }
+
+        if (currentDefects < 0) {
+            throw new IllegalArgumentException("Current defects cannot be negative");
+        }
+
+        int reducedDefects = Math.max(0, previousDefects - currentDefects);
+        return calculatePercentage(reducedDefects, previousDefects);
+    }
+
+    public boolean hasDefectCountImproved(int previousDefects, int currentDefects) {
+        if (previousDefects < 0 || currentDefects < 0) {
+            throw new IllegalArgumentException("Defect counts cannot be negative");
+        }
+
+        return currentDefects <= previousDefects;
     }
 }
