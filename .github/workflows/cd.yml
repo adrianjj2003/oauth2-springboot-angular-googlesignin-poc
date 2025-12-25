@@ -4,20 +4,20 @@ on:
   push:
     branches: [ develop ]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-push-resource-server:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
       - name: Login en GitHub Container Registry
-        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build imagen Docker resource-server
         run: |
@@ -30,7 +30,7 @@ jobs:
         run: |
           docker push ghcr.io/${{ github.repository_owner }}/resource-server:${{ github.sha }}
           docker push ghcr.io/${{ github.repository_owner }}/resource-server:latest
-          
+
       - name: Escaneo de vulnerabilidades (post-push)
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -38,4 +38,6 @@ jobs:
           format: table
           severity: CRITICAL,HIGH
           exit-code: "0"
+
+
 
