@@ -24,5 +24,18 @@ jobs:
       - name: Build backend + tests + calidad (Maven, resource-server)
         working-directory: ./resource-server
         run: mvn -B clean verify
+        
+      - name: Build imagen Docker resource-server
+        run: |
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/resource-server:${{ github.sha }} \
+            -t ghcr.io/${{ github.repository_owner }}/resource-server:latest \
+            ./resource-server
+
+      - name: Push imagen a GHCR
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/resource-server:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/resource-server:latest
+
 
         
