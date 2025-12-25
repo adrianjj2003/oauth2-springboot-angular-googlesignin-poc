@@ -30,6 +30,9 @@ jobs:
           tags: |
             ghcr.io/adrianjj2003/resource-server:${{ github.sha }}
             ghcr.io/adrianjj2003/resource-server:latest
+            
+      - name: Debug identidad
+        run: echo "actor=${{ github.actor }} owner=${{ github.repository_owner }} repo=${{ github.repository }}"
 
       - name: Escaneo de vulnerabilidades (post-push)
         uses: aquasecurity/trivy-action@0.28.0
