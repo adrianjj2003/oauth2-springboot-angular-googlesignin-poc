@@ -96,6 +96,7 @@ jobs:
           load: true
           tags: resource-server:ci-${{ github.sha }}
 
+
       - name: Trivy scan (imagen local)
         uses: aquasecurity/trivy-action@0.28.0
         with:
