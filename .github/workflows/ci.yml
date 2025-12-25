@@ -10,17 +10,15 @@ permissions:
   contents: read
   pull-requests: read
 
-
 jobs:
   quality-security:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      - name: Checkout código (HEAD)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
 
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
@@ -29,15 +27,24 @@ jobs:
           java-version: '17'
           cache: maven
 
+      # OKR4.4 - Detección de secretos (antes de construir)
+      - name: Gitleaks scan (secret detection)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      # OKR3/OKR4 - build + tests + calidad
       - name: Build backend + tests + calidad (Maven, resource-server)
         working-directory: ./resource-server
         run: mvn -B clean verify
 
-      - name: Generar SBOM (CycloneDX)
+      # OKR4.1 - SBOM HEAD
+      - name: Generar SBOM (HEAD) - CycloneDX
         working-directory: ./resource-server
-        run: mvn -B cyclonedx:makeBom
+        run: mvn -B -DskipTests cyclonedx:makeBom
 
-      - name: Subir SBOM como artifact
+      - name: Subir SBOM HEAD como artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom-resource-server-${{ github.sha }}
@@ -45,17 +52,41 @@ jobs:
             resource-server/target/bom.xml
             resource-server/target/bom.json
 
+      # OKR4.1 - Aviso explícito si cambia el SBOM (solo en PR: BASE vs HEAD)
+      - name: Checkout BASE (para comparar SBOM)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+          fetch-depth: 0
+
+      - name: Generar SBOM (BASE) - CycloneDX
+        if: ${{ github.event_name == 'pull_request' }}
+        working-directory: ./base/resource-server
+        run: mvn -B -DskipTests cyclonedx:makeBom
+
+      - name: Aviso SBOM (cambios BASE vs HEAD)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -e
+          HEAD_BOM="resource-server/target/bom.json"
+          BASE_BOM="base/resource-server/target/bom.json"
+
+          echo "## OKR4 - Control de SBOM" >> "$GITHUB_STEP_SUMMARY"
+
+          if cmp -s "$BASE_BOM" "$HEAD_BOM"; then
+            echo "✅ **SBOM sin cambios** (BASE: ${{ github.base_ref }} vs HEAD: PR)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ **SBOM CAMBIÓ** (BASE: ${{ github.base_ref }} vs HEAD: PR)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Este aviso indica cambios en dependencias/metadata. Revisar el SBOM adjunto en artifacts." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Docker build local (NO push) + scan local (refuerzo OKR4)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        
-      - name: Gitleaks scan (secret detection)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
-
-          
       - name: Build imagen Docker local (NO push)
         uses: docker/build-push-action@v6
         with:
@@ -73,4 +104,3 @@ jobs:
           exit-code: 0
           vuln-type: os,library
           severity: CRITICAL,HIGH
-
