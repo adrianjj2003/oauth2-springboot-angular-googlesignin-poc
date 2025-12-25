@@ -1,9 +1,10 @@
-name: CI
+name: backend-ci
 
 on:
   pull_request:
+    branches: [ develop ]
   push:
-    branches: ["develop"]
+    branches: [ develop ]
 
 permissions:
   contents: read
@@ -13,48 +14,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout código
+        uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
           cache: maven
 
-      - name: Build + tests + quality (Checkstyle/SpotBugs/JaCoCo)
-        working-directory: resource-server
+      - name: Build backend + tests + calidad (Maven, resource-server)
+        working-directory: ./resource-server
         run: mvn -B clean verify
 
-      - name: Generate SBOM (CycloneDX)
-        working-directory: resource-server
+      - name: Generar SBOM (CycloneDX)
+        working-directory: ./resource-server
         run: mvn -B cyclonedx:makeBom
 
-      - name: Upload SBOM artifact
+      - name: Subir SBOM como artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom-resource-server-${{ github.sha }}
           path: |
-            resource-server/target/bom.json
             resource-server/target/bom.xml
+            resource-server/target/bom.json
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image locally (no push)
+      - name: Build imagen Docker local (NO push)
         uses: docker/build-push-action@v6
         with:
           context: ./resource-server
           file: ./resource-server/Dockerfile
           push: false
           load: true
-          tags: resource-server:pr-${{ github.sha }}
+          tags: resource-server:ci-${{ github.sha }}
 
-      - name: Trivy scan (local image)
+      - name: Trivy scan (imagen local)
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: resource-server:pr-${{ github.sha }}
+          image-ref: resource-server:ci-${{ github.sha }}
           format: table
           exit-code: 0
           vuln-type: os,library
           severity: CRITICAL,HIGH
+
