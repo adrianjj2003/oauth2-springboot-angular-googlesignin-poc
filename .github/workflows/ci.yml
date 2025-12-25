@@ -1,14 +1,16 @@
-# Pipeline de CI para OKR2 (resource-server) 
-name: CI
+name: backend-ci
 
 on:
-  push:
-    branches: [ develop ]
   pull_request:
     branches: [ develop ]
+  push:
+    branches: [ develop ]
+
+permissions:
+  contents: read
 
 jobs:
-  backend-ci:
+  quality-security:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,9 +22,42 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: maven
 
       - name: Build backend + tests + calidad (Maven, resource-server)
         working-directory: ./resource-server
         run: mvn -B clean verify
 
-        
+      - name: Generar SBOM (CycloneDX)
+        working-directory: ./resource-server
+        run: mvn -B cyclonedx:makeBom
+
+      - name: Subir SBOM como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-resource-server-${{ github.sha }}
+          path: |
+            resource-server/target/bom.xml
+            resource-server/target/bom.json
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build imagen Docker local (NO push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./resource-server
+          file: ./resource-server/Dockerfile
+          push: false
+          load: true
+          tags: resource-server:ci-${{ github.sha }}
+
+      - name: Trivy scan (imagen local)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: resource-server:ci-${{ github.sha }}
+          format: table
+          exit-code: 0
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
