@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+
 
 jobs:
   quality-security:
@@ -45,8 +47,10 @@ jobs:
         
       - name: Gitleaks scan (secret detection)
         uses: gitleaks/gitleaks-action@v2
-        with:
-          fail: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
           
       - name: Build imagen Docker local (NO push)
         uses: docker/build-push-action@v6
