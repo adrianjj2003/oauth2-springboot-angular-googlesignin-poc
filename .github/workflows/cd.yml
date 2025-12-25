@@ -24,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login en GitHub Container Registry (GHCR)
+      - name: Login en GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -40,10 +40,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
-      # OKR4: escaneo tras "despliegue" (post-push) de la imagen publicada
       - name: Trivy scan (imagen publicada en GHCR)
         uses: aquasecurity/trivy-action@0.28.0
         with:
