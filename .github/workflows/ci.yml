@@ -42,7 +42,12 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
+        
+      - name: Gitleaks scan (secret detection)
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          fail: false
+          
       - name: Build imagen Docker local (NO push)
         uses: docker/build-push-action@v6
         with:
