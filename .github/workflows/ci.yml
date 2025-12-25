@@ -1,41 +1,60 @@
-# Pipeline de CI para OKR2 (resource-server) 
 name: CI
 
 on:
-  push:
-    branches: [ develop ]
   pull_request:
-    branches: [ develop ]
+  push:
+    branches: ["develop"]
+
+permissions:
+  contents: read
 
 jobs:
-  backend-ci:
+  quality-security:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar JDK 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
+          cache: maven
 
-      - name: Build backend + tests + calidad (Maven, resource-server)
-        working-directory: ./resource-server
+      - name: Build + tests + quality (Checkstyle/SpotBugs/JaCoCo)
+        working-directory: resource-server
         run: mvn -B clean verify
-        
-      - name: Build imagen Docker resource-server
-        run: |
-          docker build \
-            -t ghcr.io/${{ github.repository_owner }}/resource-server:${{ github.sha }} \
-            -t ghcr.io/${{ github.repository_owner }}/resource-server:latest \
-            ./resource-server
 
-      - name: Push imagen a GHCR
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/resource-server:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/resource-server:latest
+      - name: Generate SBOM (CycloneDX)
+        working-directory: resource-server
+        run: mvn -B cyclonedx:makeBom
 
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-resource-server-${{ github.sha }}
+          path: |
+            resource-server/target/bom.json
+            resource-server/target/bom.xml
 
-        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image locally (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./resource-server
+          file: ./resource-server/Dockerfile
+          push: false
+          load: true
+          tags: resource-server:pr-${{ github.sha }}
+
+      - name: Trivy scan (local image)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: resource-server:pr-${{ github.sha }}
+          format: table
+          exit-code: 0
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
